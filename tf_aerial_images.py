@@ -19,25 +19,30 @@ import code
 
 import tensorflow.python.platform
 
-import numpy
+import numpy as np
 import tensorflow as tf
+import itertools
 
 NUM_CHANNELS = 3 # RGB images
 PIXEL_DEPTH = 255
 NUM_LABELS = 2
-TRAINING_SIZE = 50
+TRAINING_SIZE = 64
 TESTING_SIZE = 50
-VALIDATION_SIZE = 50  # Size of the validation set.
-SEED = 66478  # Set to None for random seed.
-BATCH_SIZE = 16 # 64
-NUM_EPOCHS = 10
+VALIDATION_SIZE = 36# Size of the validation set.
+SEED = None #66478  # Set to None for random seed.
+BATCH_SIZE = 32 # 64
+NUM_EPOCHS = 20
 RESTORE_MODEL = False # If True, restore existing model instead of training a new one
 RECORDING_STEP = 1000
+FILTER_SIZE = 8
+NB_NEUR1 = 32
+NB_NEUR2 = 64
 
 # Set image patch size in pixels
 # IMG_PATCH_SIZE should be a multiple of 4
 # image size should be an integer multiple of this number!
 IMG_PATCH_SIZE = 16
+NB_NEUR3 = IMG_PATCH_SIZE**2*2
 
 tf.app.flags.DEFINE_string('train_dir', '/tmp/mnist',
                            """Directory where to write event logs """
@@ -59,7 +64,19 @@ def img_crop(im, w, h):
             list_patches.append(im_patch)
     return list_patches
 
-def extract_data(filename, num_images):
+def img_full_crop(im,w,h):
+    list_patches = []
+    imgwidth, imgheight = im.shape[0:2]
+    is_2d = len(im.shape) < 3
+    for i,j in itertools.product(range(imgheight-h),range(imgweight-w)):
+        if is_2d:
+            im_patch = im[j:j+w,i:i+h]
+        else:
+            im_patch = im[j:j+w,i:i+h,:]
+        list_patches.append(im_patch)
+    return list_patches
+    
+def extract_data(filename, num_images, full=False):
     """Extract the images into a 4D tensor [image index, y, x, channels].
     Values are rescaled from [0, 255] down to [-0.5, 0.5].
     """
@@ -79,22 +96,29 @@ def extract_data(filename, num_images):
     IMG_HEIGHT = imgs[0].shape[1]
     N_PATCHES_PER_IMAGE = (IMG_WIDTH/IMG_PATCH_SIZE)*(IMG_HEIGHT/IMG_PATCH_SIZE)
 
-    img_patches = [img_crop(imgs[i], IMG_PATCH_SIZE, IMG_PATCH_SIZE) for i in range(num_images)]
+    if(full):
+        img_patches = [img_full_crop(imgs[i], IMG_PATCH_SIZE, IMG_PATCH_SIZE) for i in range(num_images)]
+    else:
+        img_patches = [img_crop(imgs[i], IMG_PATCH_SIZE, IMG_PATCH_SIZE) for i in range(num_images)]
     data = [img_patches[i][j] for i in range(len(img_patches)) for j in range(len(img_patches[i]))]
 
-    return numpy.asarray(data)
-        
+    return np.asarray(data)#-0.5
+    
 # Assign a label to a patch v
 def value_to_class(v):
-    foreground_threshold = 0.25 # percentage of pixels > 1 required to assign a foreground label to a patch
-    df = numpy.sum(v)
+    foreground_threshold = 0.25#-0.25 # percentage of pixels > 1 required to assign a foreground label to a patch
+    df = np.sum(v)
     if df > foreground_threshold:
         return [0, 1]
     else:
         return [1, 0]
+        
+def value_to_class_full(v):
+    value=v[int(v.shape[0]/2),int(v.shape[1])]
+    return [value, ~value+2]
 
 # Extract label images
-def extract_labels(filename, num_images):
+def extract_labels(filename, num_images, full=False):
     """Extract the labels into a 1-hot matrix [image index, label index]."""
     gt_imgs = []
     for i in range(1, num_images+1):
@@ -108,25 +132,30 @@ def extract_labels(filename, num_images):
             print ('File ' + image_filename + ' does not exist')
 
     num_images = len(gt_imgs)
-    gt_patches = [img_crop(gt_imgs[i], IMG_PATCH_SIZE, IMG_PATCH_SIZE) for i in range(num_images)]
-    data = numpy.asarray([gt_patches[i][j] for i in range(len(gt_patches)) for j in range(len(gt_patches[i]))])
-    labels = numpy.asarray([value_to_class(numpy.mean(data[i])) for i in range(len(data))])
+    if(full):
+        gt_patches = [img_crop_full(gt_imgs[i], IMG_PATCH_SIZE, IMG_PATCH_SIZE) for i in range(num_images)]
+        data = np.asarray([gt_patches[i][j] for i in range(len(gt_patches)) for j in range(len(gt_patches[i]))])
+        labels = np.asarray([value_to_class_full(data[i]) for i in range(len(data))])
+    else:
+        gt_patches = [img_crop(gt_imgs[i], IMG_PATCH_SIZE, IMG_PATCH_SIZE) for i in range(num_images)]
+        data = np.asarray([gt_patches[i][j] for i in range(len(gt_patches)) for j in range(len(gt_patches[i]))])
+        labels = np.asarray([value_to_class(np.mean(data[i])) for i in range(len(data))])
 
     # Convert to dense 1-hot representation.
-    return labels.astype(numpy.float32)
+    return labels.astype(np.float32)
 
 
 def error_rate(predictions, labels):
     """Return the error rate based on dense predictions and 1-hot labels."""
     return 100.0 - (
         100.0 *
-        numpy.sum(numpy.argmax(predictions, 1) == numpy.argmax(labels, 1)) /
+        np.sum(np.argmax(predictions, 1) == np.argmax(labels, 1)) /
         predictions.shape[0])
 
 # Write predictions from neural network to a file
 def write_predictions_to_file(predictions, labels, filename):
-    max_labels = numpy.argmax(labels, 1)
-    max_predictions = numpy.argmax(predictions, 1)
+    max_labels = np.argmax(labels, 1)
+    max_predictions = np.argmax(predictions, 1)
     file = open(filename, "w")
     n = predictions.shape[0]
     for i in range(0, n):
@@ -135,13 +164,13 @@ def write_predictions_to_file(predictions, labels, filename):
 
 # Print predictions from neural network
 def print_predictions(predictions, labels):
-    max_labels = numpy.argmax(labels, 1)
-    max_predictions = numpy.argmax(predictions, 1)
+    max_labels = np.argmax(labels, 1)
+    max_predictions = np.argmax(predictions, 1)
     print (str(max_labels) + ' ' + str(max_predictions))
 
 # Convert array of labels to an image
 def label_to_img(imgwidth, imgheight, w, h, labels):
-    array_labels = numpy.zeros([imgwidth, imgheight])
+    array_labels = np.zeros([imgwidth, imgheight])
     idx = 0
     for i in range(0,imgheight,h):
         for j in range(0,imgwidth,w):
@@ -154,8 +183,8 @@ def label_to_img(imgwidth, imgheight, w, h, labels):
     return array_labels
 
 def img_float_to_uint8(img):
-    rimg = img - numpy.min(img)
-    rimg = (rimg / numpy.max(rimg) * PIXEL_DEPTH).round().astype(numpy.uint8)
+    rimg = img - np.min(img)
+    rimg = (rimg / np.max(rimg) * PIXEL_DEPTH).round().astype(np.uint8)
     return rimg
 
 def concatenate_images(img, gt_img):
@@ -163,21 +192,21 @@ def concatenate_images(img, gt_img):
     w = gt_img.shape[0]
     h = gt_img.shape[1]
     if nChannels == 3:
-        cimg = numpy.concatenate((img, gt_img), axis=1)
+        cimg = np.concatenate((img, gt_img), axis=1)
     else:
-        gt_img_3c = numpy.zeros((w, h, 3), dtype=numpy.uint8)
+        gt_img_3c = np.zeros((w, h, 3), dtype=np.uint8)
         gt_img8 = img_float_to_uint8(gt_img)          
         gt_img_3c[:,:,0] = gt_img8
         gt_img_3c[:,:,1] = gt_img8
         gt_img_3c[:,:,2] = gt_img8
         img8 = img_float_to_uint8(img)
-        cimg = numpy.concatenate((img8, gt_img_3c), axis=1)
+        cimg = np.concatenate((img8, gt_img_3c), axis=1)
     return cimg
 
 def make_img_overlay(img, predicted_img):
     w = img.shape[0]
     h = img.shape[1]
-    color_mask = numpy.zeros((w, h, 3), dtype=numpy.uint8)
+    color_mask = np.zeros((w, h, 3), dtype=np.uint8)
     color_mask[:,:,0] = predicted_img*PIXEL_DEPTH
 
     img8 = img_float_to_uint8(img)
@@ -194,10 +223,17 @@ def main(argv=None):  # pylint: disable=unused-argument
     train_labels_filename = data_dir + 'groundtruth/'
     test_data_filename='dataset/test_set_images/test_'
 
-    # Extract it into numpy arrays.
-    train_data = extract_data(train_data_filename, TRAINING_SIZE)
-    train_labels = extract_labels(train_labels_filename, TRAINING_SIZE)
-    #test_data
+    # Extract it into np arrays.
+    train_data = extract_data(train_data_filename, TRAINING_SIZE+VALIDATION_SIZE)
+    train_labels = extract_labels(train_labels_filename, TRAINING_SIZE+VALIDATION_SIZE)
+    #print(train_data.shape)
+    #print(np.where(train_data<0))
+    #sys.exit()
+    valid_data = train_data[TRAINING_SIZE:,:,:,:]
+    train_data = train_data[:-VALIDATION_SIZE,:,:,:]
+    valid_labels = train_labels[TRAINING_SIZE:]
+    train_labels = train_labels[:-VALIDATION_SIZE]
+    
 
     num_epochs = NUM_EPOCHS
 
@@ -210,13 +246,13 @@ def main(argv=None):  # pylint: disable=unused-argument
             c1 = c1 + 1
     print ('Number of data points per class: c0 = ' + str(c0) + ' c1 = ' + str(c1))
 
-    print ('Balancing training data...')
+    print ('Balancing training data...')            # udefull, but need maybe a shuffle
     min_c = min(c0, c1)
     idx0 = [i for i, j in enumerate(train_labels) if j[0] == 1]
     idx1 = [i for i, j in enumerate(train_labels) if j[1] == 1]
     new_indices = idx0[0:min_c] + idx1[0:min_c]
-    print (len(new_indices))
-    print (train_data.shape)
+    #print (len(new_indices))
+    #print (train_data.shape)
     train_data = train_data[new_indices,:,:,:]
     train_labels = train_labels[new_indices]
 
@@ -247,22 +283,22 @@ def main(argv=None):  # pylint: disable=unused-argument
     # initial value which will be assigned when when we call:
     # {tf.initialize_all_variables().run()}
     conv1_weights = tf.Variable(
-        tf.truncated_normal([5, 5, NUM_CHANNELS, 32],  # 5x5 filter, depth 32.
+        tf.truncated_normal([FILTER_SIZE, FILTER_SIZE, NUM_CHANNELS, NB_NEUR1],  # 5x5 filter, depth 32.  (number of neurons for a kernel)
                             stddev=0.1,
                             seed=SEED))
-    conv1_biases = tf.Variable(tf.zeros([32]))
+    conv1_biases = tf.Variable(tf.zeros([NB_NEUR1]))
     conv2_weights = tf.Variable(
-        tf.truncated_normal([5, 5, 32, 64],
+        tf.truncated_normal([FILTER_SIZE, FILTER_SIZE, NB_NEUR1, NB_NEUR2],
                             stddev=0.1,
                             seed=SEED))
-    conv2_biases = tf.Variable(tf.constant(0.1, shape=[64]))
+    conv2_biases = tf.Variable(tf.constant(0.1, shape=[NB_NEUR2]))
     fc1_weights = tf.Variable(  # fully connected, depth 512.
-        tf.truncated_normal([int(IMG_PATCH_SIZE / 4 * IMG_PATCH_SIZE / 4 * 64), 512],
+        tf.truncated_normal([int(IMG_PATCH_SIZE / 4 * IMG_PATCH_SIZE / 4 * 64), NB_NEUR3],
                             stddev=0.1,
                             seed=SEED))
-    fc1_biases = tf.Variable(tf.constant(0.1, shape=[512]))
+    fc1_biases = tf.Variable(tf.constant(0.1, shape=[NB_NEUR3]))
     fc2_weights = tf.Variable(
-        tf.truncated_normal([512, NUM_LABELS],
+        tf.truncated_normal([NB_NEUR3, NUM_LABELS],
                             stddev=0.1,
                             seed=SEED))
     fc2_biases = tf.Variable(tf.constant(0.1, shape=[NUM_LABELS]))
@@ -293,7 +329,7 @@ def main(argv=None):  # pylint: disable=unused-argument
 
     # Get prediction for given input image 
     def get_prediction(img):
-        data = numpy.asarray(img_crop(img, IMG_PATCH_SIZE, IMG_PATCH_SIZE))
+        data = np.asarray(img_crop(img, IMG_PATCH_SIZE, IMG_PATCH_SIZE))
         data_node = tf.constant(data)
         output = tf.nn.softmax(model(data_node))
         output_prediction = s.run(output)
@@ -456,7 +492,7 @@ def main(argv=None):  # pylint: disable=unused-argument
             # Build the summary operation based on the TF collection of Summaries.
             summary_op = tf.summary.merge_all()
             summary_writer = tf.summary.FileWriter(FLAGS.train_dir,
-                                                    graph_def=s.graph_def)
+                                                    graph=s.graph)#_def=s.graph_def)
             print ('Initialized!')
             # Loop through training steps.
             print ('Total number of iterations = ' + str(int(num_epochs * train_size / BATCH_SIZE)))
@@ -466,7 +502,7 @@ def main(argv=None):  # pylint: disable=unused-argument
             for iepoch in range(num_epochs):
 
                 # Permute training indices
-                perm_indices = numpy.random.permutation(training_indices)
+                perm_indices = np.random.permutation(training_indices)
 
                 for step in range (int(train_size / BATCH_SIZE)):
 
@@ -477,7 +513,7 @@ def main(argv=None):  # pylint: disable=unused-argument
                     # Note that we could use better randomization across epochs.
                     batch_data = train_data[batch_indices, :, :, :]
                     batch_labels = train_labels[batch_indices]
-                    # This dictionary maps the batch data (as a numpy array) to the
+                    # This dictionary maps the batch data (as a np array) to the
                     # node in the graph is should be fed to.
                     feed_dict = {train_data_node: batch_data,
                                  train_labels_node: batch_labels}
@@ -493,7 +529,7 @@ def main(argv=None):  # pylint: disable=unused-argument
 
                         # print_predictions(predictions, batch_labels)
 
-                        print ('Epoch %.2f' % (float(step) * BATCH_SIZE / train_size))
+                        print ('Epoch {}: {:.2f}%'.format(iepoch,(float(step) * BATCH_SIZE / train_size)))
                         print ('Minibatch loss: %.3f, learning rate: %.6f' % (l, lr))
                         print ('Minibatch error: %.1f%%' % error_rate(predictions,
                                                                      batch_labels))
@@ -514,7 +550,7 @@ def main(argv=None):  # pylint: disable=unused-argument
         prediction_training_dir = "predictions_training/"
         if not os.path.isdir(prediction_training_dir):
             os.mkdir(prediction_training_dir)
-        for i in range(1, TRAINING_SIZE+1):
+        for i in range(1, TRAINING_SIZE+VALIDATION_SIZE+1):
             pimg = get_prediction_with_groundtruth(train_data_filename, i)
             Image.fromarray(pimg).save(prediction_training_dir + "prediction_" + str(i) + ".png")
             oimg = get_prediction_with_overlay(train_data_filename, i)
@@ -534,7 +570,7 @@ def main(argv=None):  # pylint: disable=unused-argument
                 for j in range(0,pred.shape[1], IMG_PATCH_SIZE):
                     for k in range(0,pred.shape[0], IMG_PATCH_SIZE):
                         patch = pred[k:k+IMG_PATCH_SIZE,j:j+IMG_PATCH_SIZE]
-                        label = int(numpy.mean(patch)<0.5)
+                        label = int(np.mean(patch)<0.5)
                         f.writelines("{:03d}_{}_{},{}\n".format(i,j,k,label))
             #pimg = get_test_prediction_with_groundtruth("dataset/test_set_images/", i)
 if __name__ == '__main__':
