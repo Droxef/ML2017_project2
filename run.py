@@ -49,22 +49,22 @@ if __name__=="__main__":
     image_dir = root_dir + "images/"
     files = os.listdir(image_dir)
     n = min(100, len(files))
-    print("Loading " + str(n) + " images")
     imgs = [load_image(image_dir + files[i]) for i in tqdm(range(n))]
-    print(files[0])
 
     gt_dir = root_dir + "groundtruth/"
-    print("Loading " + str(n) + " images")
     gt_imgs = [load_image(gt_dir + files[i]) for i in tqdm(range(n))]
 
     ###### Load test images #######
     test_dir = "dataset/test_set_images/"
     dirs = os.listdir(test_dir)
-    n_test=min(50, len(dirs))
-
+    if(len(sys.argv)>2):
+        n_test=min(sys.argv[2], len(dirs))
+    else:
+        n_test=min(50, len(dirs))
+    
     imgs_test = [load_image(test_dir+dirs[i]+"/"+dirs[i]+".png") for i in tqdm(range(n_test))]
     
-    if(!trained):
+    if(not trained):
         ###### Get patches for all images ######
         print("Patching the images")
         patches_img=np.asarray([img_patches(imgs[i]) for i in range(len(imgs))])
@@ -74,19 +74,21 @@ if __name__=="__main__":
         patches_gt=np.asarray([img_patches(gt_imgs[i]) for i in range(len(imgs))])
         patches_gt=patches_gt.reshape((len(imgs)*patches_gt.shape[1]**2,)+patches_gt[0,0,0].shape)
 
-        patches_img_test=np.asarray([img_patches(imgs_test[i]) for i in range(len(imgs_test))])
-        patches_img_test=patches_img_test.reshape((
-            len(imgs_test),patches_img_test.shape[1]*patches_img_test.shape[2])+patches_img_test[0,0,0,0].shape)
-        patches_glcm_test=np.asarray([img_patches(imgs_test[i],gray=True) for i in range(len(imgs_test))])
-        patches_glcm_test=patches_glcm_test.reshape((
-            len(imgs_test),patches_glcm_test.shape[1]*patches_img_test.shape[2])+patches_glcm_test[0,0,0].shape)
-
+    patches_img_test=np.asarray([img_patches(imgs_test[i]) for i in range(len(imgs_test))])
+    patches_img_test=patches_img_test.reshape((
+        len(imgs_test),patches_img_test.shape[1]*patches_img_test.shape[2])+patches_img_test[0,0,0,0].shape)
+    patches_glcm_test=np.asarray([img_patches(imgs_test[i],gray=True) for i in range(len(imgs_test))])
+    patches_glcm_test=patches_glcm_test.reshape((
+        len(imgs_test),patches_glcm_test.shape[1]*patches_glcm_test.shape[2])+patches_glcm_test[0,0,0].shape)
+    if not trained:
         ##### Get feature vector and label vector #####
         print("Finding training feature")
-        X=np.asarray([extract_features_ngbr(patches_img,patches_glcm,i+2) for i in tqdm(range(len(imgs)*(imgs[0].shape[0]//WINDOW)**2))])
+        X=np.asarray([extract_features_ngbr(patches_img,patches_glcm,i) for i in tqdm(range(len(imgs)*(imgs[0].shape[0]//WINDOW)**2))])
         np.savetxt("feature_all_patches.txt",X,fmt='%.10e')  # Save all features in file
     print("Finding Testing feature")
-    X_test=np.asarray([extract_features_ngbr(patches_img_test,patches_glcm_test,i+2) for i in tqdm(range(len(imgs)*(imgs_test[0].shape[0]//WINDOW)**2))])
+    X_test=np.asarray([extract_features_ngbr(patches_img_test[i],patches_glcm_test[i],j) 
+                       for i in tqdm(range(patches_img_test.shape[0])) for j in tqdm(range((imgs_test[i].shape[0]//WINDOW)**2))])
+    #X_test=np.asarray([extract_features_ngbr(patches_img_test,patches_glcm_test,i+10+2*imgs[0].shape[0]//WINDOW) for i in tqdm(range(len(imgs)*(imgs_test[0].shape[0]//WINDOW)**2))])
     Y=np.asarray([extract_label(patches_gt[i+2]) for i in tqdm(range(len(gt_imgs)*(imgs[0].shape[0]//WINDOW)**2))])
     if(trained):
         # if use pretrained info, get already acquired features
@@ -97,11 +99,11 @@ if __name__=="__main__":
     X_pca,X_test_pca=pca_decomposition(X,X_test)
     
     ##### SVM ####
-    if(!trained):
+    if(not trained):
         print("splitting data in training and testing set")
         X_train, X_test, Y_train, Y_test = train_test_split(X_pca, Y, test_size=0.25, random_state=42)
         print("Carrying grid search on hyperparameter, using cross-validation")
-        param_grid = {'C': [1e3, 1e4, 1e5 1e6],
+        param_grid = {'C': [1e3, 1e4, 1e5, 1e6],
               'gamma': [0.0001, 0.001, 0.01, 0.1], }
         clf = GridSearchCV(svm.SVC(kernel='rbf', class_weight='balanced'), param_grid, cv=4,verbose=100,iid=False,n_jobs=8)
         clf = clf.fit(X_train,Y_train)
@@ -110,9 +112,10 @@ if __name__=="__main__":
         with open('svm_model.pkl','wb') as saved_model:
             print("saving model")
             joblib.dump(clf,saved_model)
-    with open('svm_model.pkl','rb') as saved_model:
-        print("retrieving model")
-        clf=joblib.load(saved_model)
+    if(trained):
+        with open('svm_model.pkl','rb') as saved_model:
+            print("retrieving model")
+            clf=joblib.load(saved_model)
         
     ##### Estimating result on test set #####
     Z = [clf.predict(x) for x in X_test_pca]

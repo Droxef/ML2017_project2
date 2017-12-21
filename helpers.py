@@ -1,5 +1,7 @@
 import matplotlib.image as mpimg
 import numpy as np
+import skimage
+from skimage.color import rgb2gray
 
 def load_image(infilename):
     data = mpimg.imread(infilename)
@@ -47,13 +49,14 @@ def img_patches(img,WINDOW=WINDOW,gray=False):
         Return a list of patches, with a symmetric padding of size 2*WINDOW in x and y direction.
         If gray is true, will transform a color image in grayscale and return its list of patches.
     """
+    REPEAT=1
     if(gray):
         img=rgb2gray(img)
     if(len(img.shape)>2):
-        padded_img=skimage.util.pad(img,((2*WINDOW,2*WINDOW),(2*WINDOW,2*WINDOW),(0,0)),'symmetric')
+        padded_img=skimage.util.pad(img,((REPEAT*WINDOW,REPEAT*WINDOW),(REPEAT*WINDOW,REPEAT*WINDOW),(0,0)),'symmetric')
         patches=skimage.util.view_as_blocks(padded_img,(WINDOW,WINDOW,3))
     else:
-        padded_img=skimage.util.pad(img,((2*WINDOW,2*WINDOW),(2*WINDOW,2*WINDOW)),'symmetric')
+        padded_img=skimage.util.pad(img,((REPEAT*WINDOW,REPEAT*WINDOW),(REPEAT*WINDOW,REPEAT*WINDOW)),'symmetric')
         patches=skimage.util.view_as_blocks(padded_img,(WINDOW,WINDOW))
     return patches
 
@@ -89,6 +92,7 @@ def compute_score(Y,Z):
 
 def label_to_img(imgwidth, imgheight, labels, w=WINDOW, h=WINDOW):
     im = np.zeros([imgwidth, imgheight])
+    labels=labels.reshape((labels.shape[0])+labels.shape[1:])
     idx = 0
     for i in range(0,imgheight,h):
         for j in range(0,imgwidth,w):

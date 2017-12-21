@@ -1,10 +1,13 @@
 """ Module used to extract the features of a 16x16 px patch of an image """
 import warnings
+import numpy as np
 import scipy
 from scipy import signal
 import skimage
 from skimage.color import rgb2gray
 from skimage.feature import greycomatrix, greycoprops
+
+WINDOW=16
 
 sobel = np.array([[1,2,1],[0,0,0],[-1,-2,-1]])
 def edgedetect(img):
@@ -60,10 +63,18 @@ def extract_features_ngbr(color,gray,index):
     """
         Extract features of neighboring patches, and add them to patch feature
     """
-    feat=np.append(extract_features_patch(color[index]),extract_features_patch(gray[index]))
+    if(color.shape[0]%100==0):
+        color=color.reshape((100,int(np.sqrt(color.shape[0]//100)),int(np.sqrt(color.shape[0]//100)))+color.shape[1:])
+        gray=gray.reshape((100,int(np.sqrt(gray.shape[0]//100)),int(np.sqrt(gray.shape[0]//100)))+gray.shape[1:])
+    else:
+        color=color.reshape((1,int(np.sqrt(color.shape[0])),int(np.sqrt(color.shape[0])))+color.shape[1:])
+        gray=gray.reshape((1,int(np.sqrt(gray.shape[0])),int(np.sqrt(gray.shape[0])))+gray.shape[1:])
+    k=index//(color.shape[1]*color.shape[2])
+    row,col=np.unravel_index(index%100,(color.shape[1]-2,color.shape[2]-2))
+    feat=np.append(extract_features_patch(color[k,row+1,col+1]),extract_features_patch(gray[k,row+1,col+1]))
     for i in [-2,-1,1,2]:
-        feat=np.append(feat,extract_features_patch(color[index+i]))
-        feat=np.append(feat,extract_features_patch(gray[index+i]))
-        feat=np.append(feat,extract_features_patch(color[index+i*(imgs[0].shape[0]//WINDOW+4)]))
-        feat=np.append(feat,extract_features_patch(gray[index+i*(imgs[0].shape[0]//WINDOW+4)]))
+        feat=np.append(feat,extract_features_patch(color[k,row+1,col+1+i]))
+        feat=np.append(feat,extract_features_patch(gray[k,row+1,col+1+i]))
+        feat=np.append(feat,extract_features_patch(color[k,row+1+i,col+1]))
+        feat=np.append(feat,extract_features_patch(gray[k,row+1+i,col+1]))
     return feat
