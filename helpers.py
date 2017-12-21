@@ -91,7 +91,6 @@ def compute_score(Y,Z):
 def label_to_img(imgwidth, imgheight, labels, w=WINDOW, h=WINDOW):
     im = np.zeros([imgwidth, imgheight])
     labels=labels.reshape((int(np.sqrt(labels.shape[0])),int(np.sqrt(labels.shape[0])))+labels.shape[1:])
-    print(labels.shape)
     for i in range(0,imgheight,h):
         for j in range(0,imgwidth,w):
             im[j:j+w, i:i+h] = labels[i//w,j//w]
@@ -102,7 +101,7 @@ def mask_to_submission(filename,masks):
     with open(filename, 'w') as f:
         f.write('id,prediction\n')
         for id_,fn in enumerate(masks):
-            f.writelines('{}\n'.format(s) for s in mask_to_submission_strings(fn, id_))
+            f.writelines('{}\n'.format(s) for s in mask_to_submission_strings(fn, id_+1))
             
 def mask_to_submission_strings(image, number):
     """Outputs the strings that should go into the submission file from the prediction mask"""
