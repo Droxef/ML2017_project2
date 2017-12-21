@@ -21,3 +21,9 @@ Several flags can be added:
 * test_features: was only for debug
 
 a second argument can be given, the number of testing images
+
+## Time estimation
+For each part of the code, a progression bar, or a time remaining text will show, thanks to tqdm library and scikit-learn verbose
+* Estimation of features extraction: *2h per 50 images*
+* Estimation of PCA: *1 minute*
+* Estimation of model training: *10 minutes* for 20000 iters
