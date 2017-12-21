@@ -35,6 +35,7 @@ if __name__=="__main__":
     ####### Decision boolean #######
     trained=False
     logistic=False
+    feature=False
 
     ####### Use of pretrained model ########
     if(len(sys.argv)>1):
