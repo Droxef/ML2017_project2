@@ -109,4 +109,4 @@ def mask_to_submission_strings(image, number):
     for j in range(0, image.shape[1], step):
         for i in range(0, image.shape[0], step):
             label = image[i, j]
-            yield("{:03d}_{}_{},{}".format(number, j, i, label))
+            yield("{:03d}_{}_{},{}".format(number, j, i, int(label)))
