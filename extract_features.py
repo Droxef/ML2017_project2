@@ -72,9 +72,6 @@ def extract_features_ngbr(color,gray,index):
     k=index//(color.shape[1]*color.shape[2])
     row,col=np.unravel_index(index%100,(color.shape[1]-2,color.shape[2]-2))
     feat=np.append(extract_features_patch(color[k,row+1,col+1]),extract_features_patch(gray[k,row+1,col+1]))
-    print("\n")
-    print(k,row,col)
-    print("\n")
     for i in [-1,1]:
         feat=np.append(feat,extract_features_patch(color[k,row+1,col+1+i]))
         feat=np.append(feat,extract_features_patch(gray[k,row+1,col+1+i]))
