@@ -27,3 +27,6 @@ For each part of the code, a progression bar, or a time remaining text will show
 * Estimation of features extraction: *2h per 50 images*
 * Estimation of PCA: *1 minute*
 * Estimation of model training: *10 minutes* for 20000 iters
+
+### Authors
+Gusset Frédérick, Scanzi jonathan, Zbinden Boris
