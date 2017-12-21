@@ -36,6 +36,7 @@ if __name__=="__main__":
     trained=False
     logistic=False
     features = False
+    test_features = False
 
     ####### Use of pretrained model ########
     if(len(sys.argv)>1):
@@ -43,6 +44,9 @@ if __name__=="__main__":
             trained=True
         if(sys.argv[1]=="features"):
             features=True
+        if(sys.argv[1]=="test_features"):
+            features=True
+            test_features=True
             
     ####### Load train and gt images ########
     print("Loading images...")
@@ -74,8 +78,8 @@ if __name__=="__main__":
         patches_img=patches_img.reshape((len(imgs)*patches_img.shape[1]**2,)+patches_img[0,0,0,0].shape)
         patches_glcm=np.asarray([img_patches(imgs[i],gray=True) for i in range(len(imgs))])
         patches_glcm=patches_glcm.reshape((len(imgs)*patches_glcm.shape[1]**2,)+patches_glcm[0,0,0].shape)
-        patches_gt=np.asarray([img_patches(gt_imgs[i]) for i in range(len(imgs))])
-        patches_gt=patches_gt.reshape((len(imgs)*patches_gt.shape[1]**2,)+patches_gt[0,0,0].shape)
+    patches_gt=np.asarray([img_patches(gt_imgs[i]) for i in range(len(imgs))])
+    patches_gt=patches_gt.reshape((len(imgs)*patches_gt.shape[1]**2,)+patches_gt[0,0,0].shape)
 
     patches_img_test=np.asarray([img_patches(imgs_test[i]) for i in range(len(imgs_test))])
     patches_img_test=patches_img_test.reshape((
@@ -89,8 +93,11 @@ if __name__=="__main__":
         X=np.asarray([extract_features_ngbr(patches_img,patches_glcm,i) for i in tqdm(range(len(imgs)*(imgs[0].shape[0]//WINDOW)**2))])
         np.savetxt("feature_all_patches.txt",X,fmt='%.10e')  # Save all features in file
     print("Finding Testing feature")
-    X_test=np.asarray([extract_features_ngbr(patches_img_test[i],patches_glcm_test[i],j,True) 
-                       for i in tqdm(range(patches_img_test.shape[0])) for j in tqdm(range((imgs_test[i].shape[0]//WINDOW)**2))])
+    if not test_features:
+        X_test=np.asarray([extract_features_ngbr(patches_img_test[i],patches_glcm_test[i],j,True) 
+                           for i in tqdm(range(patches_img_test.shape[0])) for j in tqdm(range((imgs_test[i].shape[0]//WINDOW)**2))])
+    else:
+        X_test=pd.read_csv("feature_test_all_patches.txt", delimiter=' ', header=None, dtype=np.float).as_matrix()
     #X_test=np.asarray([extract_features_ngbr(patches_img_test,patches_glcm_test,i+10+2*imgs[0].shape[0]//WINDOW) for i in tqdm(range(len(imgs)*(imgs_test[0].shape[0]//WINDOW)**2))])
     Y=np.asarray([extract_label(patches_gt[i+2]) for i in tqdm(range(len(gt_imgs)*(imgs[0].shape[0]//WINDOW)**2))])
     if(trained):
