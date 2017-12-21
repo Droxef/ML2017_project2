@@ -59,11 +59,11 @@ def extract_features_patch(img):
         feat=np.hstack((feat,feat_text,feat_ed))
     return feat
 
-def extract_features_ngbr(color,gray,index):
+def extract_features_ngbr(color,gray,index,test=False):
     """
         Extract features of neighboring patches, and add them to patch feature
     """
-    if(color.shape[0]%100==0):
+    if(not test):
         color=color.reshape((100,int(np.sqrt(color.shape[0]//100)),int(np.sqrt(color.shape[0]//100)))+color.shape[1:])
         gray=gray.reshape((100,int(np.sqrt(gray.shape[0]//100)),int(np.sqrt(gray.shape[0]//100)))+gray.shape[1:])
     else:

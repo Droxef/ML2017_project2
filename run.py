@@ -35,6 +35,7 @@ if __name__=="__main__":
     ####### Decision boolean #######
     trained=False
     logistic=False
+    features = False
 
     ####### Use of pretrained model ########
     if(len(sys.argv)>1):
@@ -88,7 +89,7 @@ if __name__=="__main__":
         X=np.asarray([extract_features_ngbr(patches_img,patches_glcm,i) for i in tqdm(range(len(imgs)*(imgs[0].shape[0]//WINDOW)**2))])
         np.savetxt("feature_all_patches.txt",X,fmt='%.10e')  # Save all features in file
     print("Finding Testing feature")
-    X_test=np.asarray([extract_features_ngbr(patches_img_test[i],patches_glcm_test[i],j) 
+    X_test=np.asarray([extract_features_ngbr(patches_img_test[i],patches_glcm_test[i],j,True) 
                        for i in tqdm(range(patches_img_test.shape[0])) for j in tqdm(range((imgs_test[i].shape[0]//WINDOW)**2))])
     #X_test=np.asarray([extract_features_ngbr(patches_img_test,patches_glcm_test,i+10+2*imgs[0].shape[0]//WINDOW) for i in tqdm(range(len(imgs)*(imgs_test[0].shape[0]//WINDOW)**2))])
     Y=np.asarray([extract_label(patches_gt[i+2]) for i in tqdm(range(len(gt_imgs)*(imgs[0].shape[0]//WINDOW)**2))])
