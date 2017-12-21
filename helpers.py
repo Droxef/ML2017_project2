@@ -92,11 +92,11 @@ def compute_score(Y,Z):
 
 def label_to_img(imgwidth, imgheight, labels, w=WINDOW, h=WINDOW):
     im = np.zeros([imgwidth, imgheight])
-    labels=labels.reshape((labels.shape[0])+labels.shape[1:])
+    labels=labels.reshape((int(np.sqrt(labels.shape[0])),int(np.sqrt(labels.shape[0])))+labels.shape[1:])
     idx = 0
     for i in range(0,imgheight,h):
         for j in range(0,imgwidth,w):
-            im[j:j+w, i:i+h] = labels[idx]
+            im[j:j+w, i:i+h] = labels[i+1,j+1]
             idx = idx + 1
     return im
 
