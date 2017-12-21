@@ -19,4 +19,5 @@ Several flags can be added:
 * trained: will used the trained model and compute only the features of the testing images
 * features: will load the computed features and train the model with them
 * test_features: was only for debug
+
 a second argument can be given, the number of testing images
