@@ -103,9 +103,8 @@ if __name__=="__main__":
         print("splitting data in training and testing set")
         X_train, X_test, Y_train, Y_test = train_test_split(X_pca, Y, test_size=0.25, random_state=42)
         print("Carrying grid search on hyperparameter, using cross-validation")
-        param_grid = {'C': [1e3, 1e4, 1e5, 1e6],
-              'gamma': [0.0001, 0.001, 0.01, 0.1], }
-        clf = GridSearchCV(svm.SVC(kernel='rbf', class_weight='balanced',verbose=True), param_grid, cv=4,verbose=100,iid=False,n_jobs=8)
+        param_grid = {'C': [1e3, 1e4, 1e5, 1e6],}
+        clf = GridSearchCV(linear_model.LogisticRegression(C=c, class_weight="balanced"), param_grid, cv=4,verbose=100,iid=False,n_jobs=8)
         clf = clf.fit(X_train,Y_train)
         Y_pred = clf.predict(X_test)
         print(classification_report(Y_test, Y_pred, labels=range(2)))
@@ -121,4 +120,3 @@ if __name__=="__main__":
     Z = [clf.predict(x) for x in X_test_pca]
     masks=[label_to_img(img.shape[0],img.shape[1],Z[i]) for i,img in enumerate(imgs_test)]
     mask_to_submission("submission.csv",masks)
-        
