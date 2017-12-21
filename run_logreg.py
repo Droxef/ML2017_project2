@@ -84,7 +84,7 @@ if __name__=="__main__":
         ##### Get feature vector and label vector #####
         print("Finding training feature")
         X=np.asarray([extract_features_ngbr(patches_img,patches_glcm,i) for i in tqdm(range(len(imgs)*(imgs[0].shape[0]//WINDOW)**2))])
-        np.savetxt("feature_all_patches.txt",X,fmt='%.10e')  # Save all features in file
+        np.savetxt("feature_all_patches_second.txt",X,fmt='%.10e')  # Save all features in file
     print("Finding Testing feature")
     X_test=np.asarray([extract_features_ngbr(patches_img_test[i],patches_glcm_test[i],j) 
                        for i in tqdm(range(patches_img_test.shape[0])) for j in tqdm(range((imgs_test[i].shape[0]//WINDOW)**2))])
@@ -98,7 +98,7 @@ if __name__=="__main__":
     print("Running PCA")
     X_pca,X_test_pca=pca_decomposition(X,X_test)
     
-    ##### SVM ####
+    ##### logreg ####
     if(not trained):
         print("splitting data in training and testing set")
         X_train, X_test, Y_train, Y_test = train_test_split(X_pca, Y, test_size=0.25, random_state=42)
@@ -108,11 +108,11 @@ if __name__=="__main__":
         clf = clf.fit(X_train,Y_train)
         Y_pred = clf.predict(X_test)
         print(classification_report(Y_test, Y_pred, labels=range(2)))
-        with open('svm_model.pkl','wb') as saved_model:
+        with open('logreg_model.pkl','wb') as saved_model:
             print("saving model")
             joblib.dump(clf,saved_model)
     if(trained):
-        with open('svm_model.pkl','rb') as saved_model:
+        with open('logreg_model.pkl','rb') as saved_model:
             print("retrieving model")
             clf=joblib.load(saved_model)
         
