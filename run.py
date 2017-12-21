@@ -100,7 +100,7 @@ if __name__=="__main__":
         X_test=pd.read_csv("feature_test_all_patches.txt", delimiter=' ', header=None, dtype=np.float).as_matrix()
     #X_test=np.asarray([extract_features_ngbr(patches_img_test,patches_glcm_test,i+10+2*imgs[0].shape[0]//WINDOW) for i in tqdm(range(len(imgs)*(imgs_test[0].shape[0]//WINDOW)**2))])
     Y=np.asarray([extract_label(patches_gt[i+2]) for i in tqdm(range(len(gt_imgs)*(imgs[0].shape[0]//WINDOW)**2))])
-    if(trained):
+    if(features):
         # if use pretrained info, get already acquired features
         X=pd.read_csv("feature_all_patches.txt", delimiter=' ', header=None, dtype=np.float).as_matrix()
     
