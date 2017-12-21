@@ -91,11 +91,10 @@ def compute_score(Y,Z):
 def label_to_img(imgwidth, imgheight, labels, w=WINDOW, h=WINDOW):
     im = np.zeros([imgwidth, imgheight])
     labels=labels.reshape((int(np.sqrt(labels.shape[0])),int(np.sqrt(labels.shape[0])))+labels.shape[1:])
-    idx = 0
+    print(labels.shape)
     for i in range(0,imgheight,h):
         for j in range(0,imgwidth,w):
-            im[j:j+w, i:i+h] = labels[i+1,j+1]
-            idx = idx + 1
+            im[j:j+w, i:i+h] = labels[i//w,j//w]
     return im
 
 def mask_to_submission(filename,masks):
@@ -111,4 +110,4 @@ def mask_to_submission_strings(image, number):
     for j in range(0, image.shape[1], step):
         for i in range(0, image.shape[0], step):
             label = image[i, j]
-            yield("{:03d}_{}_{},{}".format(img_number, j, i, label))
+            yield("{:03d}_{}_{},{}".format(number, j, i, label))

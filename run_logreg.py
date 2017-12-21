@@ -34,7 +34,7 @@ def pca_decomposition(X_train,X_test):
 if __name__=="__main__":
     ####### Decision boolean #######
     trained=False
-    logistic=False
+    logistic=True
     features=False
     test_features = False
 
@@ -116,7 +116,7 @@ if __name__=="__main__":
         X_train, X_test, Y_train, Y_test = train_test_split(X_pca, Y, test_size=0.25, random_state=42)
         print("Carrying grid search on hyperparameter, using cross-validation")
         param_grid = {'C': [1e3, 1e4, 1e5, 1e6],}
-        clf = GridSearchCV(linear_model.LogisticRegression(C=c, class_weight="balanced"), param_grid, cv=4,verbose=100,iid=False,n_jobs=8)
+        clf = GridSearchCV(linear_model.LogisticRegression(class_weight="balanced"), param_grid, cv=4,verbose=100,iid=False,n_jobs=8)
         clf = clf.fit(X_train,Y_train)
         Y_pred = clf.predict(X_test)
         print(classification_report(Y_test, Y_pred, labels=range(2)))
