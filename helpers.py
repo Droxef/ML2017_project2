@@ -60,11 +60,9 @@ def img_patches(img,WINDOW=WINDOW,gray=False):
         patches=skimage.util.view_as_blocks(padded_img,(WINDOW,WINDOW))
     return patches
 
-def value_to_class(v):
-    foreground_threshold = 0.25 # percentage of pixels > 1 required to assign a foreground label to a patch
-    
-    df = np.sum(v)
-    if df > foreground_threshold:
+def extract_label(img,threshold=0.25):
+    value=np.mean(img)
+    if value>threshold:
         return 1
     else:
         return 0

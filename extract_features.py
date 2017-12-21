@@ -62,6 +62,7 @@ def extract_features_patch(img):
 def extract_features_ngbr(color,gray,index,test=False):
     """
         Extract features of neighboring patches, and add them to patch feature
+        if test, treat as individual image, and not as extended list of images
     """
     if(not test):
         color=color.reshape((100,int(np.sqrt(color.shape[0]//100)),int(np.sqrt(color.shape[0]//100)))+color.shape[1:])
