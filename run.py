@@ -40,6 +40,8 @@ if __name__=="__main__":
     if(len(sys.argv)>1):
         if(sys.argv[1]=="trained"):
             trained=True
+        if(sys.argv[1]=="features"):
+            features=True
             
     ####### Load train and gt images ########
     print("Loading images...")
@@ -58,13 +60,13 @@ if __name__=="__main__":
     test_dir = "dataset/test_set_images/"
     dirs = os.listdir(test_dir)
     if(len(sys.argv)>2):
-        n_test=min(sys.argv[2], len(dirs))
+        n_test=min(int(sys.argv[2]), len(dirs))
     else:
         n_test=min(50, len(dirs))
     
     imgs_test = [load_image(test_dir+dirs[i]+"/"+dirs[i]+".png") for i in tqdm(range(n_test))]
     
-    if(not trained):
+    if(not features):
         ###### Get patches for all images ######
         print("Patching the images")
         patches_img=np.asarray([img_patches(imgs[i]) for i in range(len(imgs))])
@@ -80,7 +82,7 @@ if __name__=="__main__":
     patches_glcm_test=np.asarray([img_patches(imgs_test[i],gray=True) for i in range(len(imgs_test))])
     patches_glcm_test=patches_glcm_test.reshape((
         len(imgs_test),patches_glcm_test.shape[1]*patches_glcm_test.shape[2])+patches_glcm_test[0,0,0].shape)
-    if not trained:
+    if not features:
         ##### Get feature vector and label vector #####
         print("Finding training feature")
         X=np.asarray([extract_features_ngbr(patches_img,patches_glcm,i) for i in tqdm(range(len(imgs)*(imgs[0].shape[0]//WINDOW)**2))])
